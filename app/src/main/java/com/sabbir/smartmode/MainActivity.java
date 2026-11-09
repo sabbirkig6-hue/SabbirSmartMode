@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.app.NotificationManager;
+import android.content.SharedPreferences;
 import android.provider.Settings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -20,9 +21,17 @@ public class MainActivity extends Activity {
     private WebView webView;
     private static final int LOCATION_REQUEST = 100;
 
+    private NotificationManager nm;
+    private SharedPreferences prefs;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        nm = (NotificationManager)
+            getSystemService(Context.NOTIFICATION_SERVICE);
+
+        prefs = getSharedPreferences("SmartModeSettings", MODE_PRIVATE);
 
         webView = new WebView(this);
         webView.getSettings().setJavaScriptEnabled(true);
@@ -41,39 +50,53 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void requestDndAccess() {
             runOnUiThread(() -> {
-                Intent intent = new Intent(
+                startActivity(new Intent(
                     Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS
-                );
-                startActivity(intent);
+                ));
             });
         }
 
         @JavascriptInterface
         public boolean isDndAccessGranted() {
-            NotificationManager nm =
-                (NotificationManager) getSystemService(
-                    Context.NOTIFICATION_SERVICE
-                );
             return nm.isNotificationPolicyAccessGranted();
         }
 
         @JavascriptInterface
         public boolean setDnd(boolean enabled) {
-            NotificationManager nm =
-                (NotificationManager) getSystemService(
-                    Context.NOTIFICATION_SERVICE
-                );
-
             if (!nm.isNotificationPolicyAccessGranted()) {
                 return false;
             }
 
             try {
-                if (enabled) {
-                    return true;
+                boolean active = prefs.getBoolean("dnd_active", false);
+
+                if (enabled && !active) {
+                    int oldFilter = nm.getCurrentInterruptionFilter();
+
+                    prefs.edit()
+                        .putInt("old_filter", oldFilter)
+                        .putBoolean("dnd_active", true)
+                        .apply();
+
+                    nm.setInterruptionFilter(
+                        NotificationManager.INTERRUPTION_FILTER_NONE
+                    );
+
+                } else if (!enabled && active) {
+                    int oldFilter = prefs.getInt(
+                        "old_filter",
+                        NotificationManager.INTERRUPTION_FILTER_ALL
+                    );
+
+                    nm.setInterruptionFilter(oldFilter);
+
+                    prefs.edit()
+                        .putBoolean("dnd_active", false)
+                        .apply();
                 }
 
                 return true;
+
             } catch (Exception e) {
                 return false;
             }
@@ -83,21 +106,15 @@ public class MainActivity extends Activity {
         public void startMonitoring() {
             runOnUiThread(() -> {
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(
-                        new String[]{
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        },
-                        LOCATION_REQUEST
-                    );
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                    requestPermissions(new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    }, LOCATION_REQUEST);
+
                     return;
                 }
-
-                NotificationManager nm =
-                    (NotificationManager) getSystemService(
-                        Context.NOTIFICATION_SERVICE
-                    );
 
                 if (!nm.isNotificationPolicyAccessGranted()) {
                     Toast.makeText(
@@ -108,37 +125,36 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                Intent serviceIntent = new Intent(
+                Intent service = new Intent(
                     MainActivity.this,
                     IndoorDetectionService.class
                 );
 
                 if (android.os.Build.VERSION.SDK_INT >= 26) {
-                    startForegroundService(serviceIntent);
+                    startForegroundService(service);
                 } else {
-                    startService(serviceIntent);
+                    startService(service);
                 }
 
                 Toast.makeText(
                     MainActivity.this,
-                    "GPS পর্যবেক্ষণ চালু হয়েছে",
-                    Toast.LENGTH_LONG
+                    "পর্যবেক্ষণ চালুর অনুরোধ পাঠানো হয়েছে",
+                    Toast.LENGTH_SHORT
                 ).show();
             });
         }
 
         @JavascriptInterface
         public void stopMonitoring() {
-            Intent serviceIntent = new Intent(
+            stopService(new Intent(
                 MainActivity.this,
                 IndoorDetectionService.class
-            );
-            stopService(serviceIntent);
+            ));
 
             Toast.makeText(
                 MainActivity.this,
-                "GPS পর্যবেক্ষণ বন্ধ হয়েছে",
-                Toast.LENGTH_LONG
+                "পর্যবেক্ষণ বন্ধ করা হয়েছে",
+                Toast.LENGTH_SHORT
             ).show();
         }
     }
@@ -151,4 +167,4 @@ public class MainActivity extends Activity {
             super.onBackPressed();
         }
     }
-                        }
+            }
