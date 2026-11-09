@@ -1,202 +1,166 @@
+
 <!DOCTYPE html>
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#075c42">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SABBIR SMART MODE</title>
 
 <style>
-*{box-sizing:border-box}
-body{
- margin:0;
- font-family:Arial,sans-serif;
- background:#f1f7f3;
- color:#173c2c;
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #eef7f0;
+    color: #173b27;
+    text-align: center;
 }
-header{
- background:#075c42;
- color:white;
- text-align:center;
- padding:28px 15px;
- border-radius:0 0 25px 25px;
+
+.container {
+    max-width: 450px;
+    margin: 20px auto;
+    background: white;
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: 0 4px 15px #0001;
 }
-.logo{font-size:45px}
-header h2{margin:8px 0}
-header p{font-size:13px;color:#d9f5e6}
-.container{max-width:480px;margin:auto;padding:18px}
-.card{
- background:white;
- padding:18px;
- border-radius:16px;
- margin-bottom:15px;
- box-shadow:0 3px 12px #0000000b;
+
+h2 { color: #087b43; }
+
+.status {
+    background: #e5f5eb;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 15px 0;
 }
-.status{text-align:center}
-#status{font-weight:bold;color:#08734e}
-.mode{
- display:flex;
- align-items:center;
- gap:12px;
+
+button {
+    width: 100%;
+    padding: 14px;
+    margin: 7px 0;
+    border: none;
+    border-radius: 10px;
+    background: #078344;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
 }
-.mode .emoji{font-size:34px}
-.mode .info{flex:1}
-.mode h3{margin:0 0 6px;font-size:16px}
-.mode p{margin:0;color:#718078;font-size:12px}
-input[type=checkbox]{width:22px;height:22px}
-button{
- width:100%;
- padding:14px;
- border:0;
- border-radius:11px;
- background:#08734e;
- color:white;
- font-size:15px;
- font-weight:bold;
- margin-top:10px;
+
+.stop { background: #b52b2b; }
+.test { background: #2866a5; }
+.gray { background: #555; }
+
+.note {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
 }
-.secondary{background:#e3efe8;color:#075c42}
-.note{
- background:#e3f2e9;
- padding:15px;
- border-radius:12px;
- font-size:13px;
- line-height:1.8;
-}
-footer{text-align:center;padding:20px;color:#758078;font-size:12px}
 </style>
 </head>
 
 <body>
 
-<header>
- <div class="logo">🕌</div>
- <h2>SABBIR SMART MODE</h2>
- <p>আপনার ফোন চলবে আপনার নিয়মে</p>
-</header>
-
 <div class="container">
 
- <div class="card status">
-  <h3>বর্তমান অবস্থা</h3>
-  <p id="status">অ্যাপ প্রস্তুত</p>
-  <p id="gps">GPS পরীক্ষা করা হয়নি</p>
- </div>
+    <h2> SABBIR SMART MODE </h2>
+    <p>অফলাইন স্মার্ট সাইলেন্ট ব্যবস্থা</p>
 
- <div class="card mode">
-  <div class="emoji">🏠</div>
-  <div class="info">
-   <h3>Home Mode</h3>
-   <p>বাসায় প্রবেশ করলে সাইলেন্ট</p>
-  </div>
-  <input type="checkbox" id="home">
- </div>
+    <div class="status" id="status">
+        অ্যাপ প্রস্তুত
+    </div>
 
- <div class="card mode">
-  <div class="emoji">🕌</div>
-  <div class="info">
-   <h3>Mosque Mode</h3>
-   <p>মসজিদে প্রবেশ করলে সাইলেন্ট</p>
-  </div>
-  <input type="checkbox" id="mosque">
- </div>
+    <button onclick="requestDnd()">
+        DND অনুমতি দিন
+    </button>
 
- <div class="card">
-  <h3>ফোন নিয়ন্ত্রণ</h3>
-  <button onclick="requestDnd()">
-   DND অনুমতি দিন
-  </button>
+    <button onclick="startMonitoring()">
+        GPS পর্যবেক্ষণ চালু করুন
+    </button>
 
-  <button onclick="testSilent()">
-   সাইলেন্ট পরীক্ষা
-  </button>
+    <button class="stop" onclick="stopMonitoring()">
+        GPS পর্যবেক্ষণ বন্ধ করুন
+    </button>
 
-  <button class="secondary" onclick="restoreSound()">
-   সাউন্ড চালু পরীক্ষা
-  </button>
- </div>
+    <hr>
 
- <div class="card">
-  <button onclick="checkGPS()">📍 GPS পরীক্ষা করুন</button>
- </div>
+    <h3>সাউন্ড পরীক্ষা</h3>
 
- <div class="note">
-  <b>নির্দেশনা:</b><br>
-  প্রথমে DND অনুমতি দিতে হবে।
-  তারপর সাইলেন্ট ও সাউন্ড পরীক্ষা করা যাবে।
-  GPS স্বয়ংক্রিয় ব্যবস্থা পরবর্তী ধাপে যুক্ত হবে।
- </div>
+    <button class="test" onclick="testSilent()">
+        সাইলেন্ট পরীক্ষা
+    </button>
+
+    <button class="gray" onclick="restoreSound()">
+        আগের সাউন্ড ফিরিয়ে দিন
+    </button>
+
+    <p id="gps">GPS পর্যবেক্ষণ এখনো পরীক্ষা করা হয়নি</p>
+
+    <p class="note">
+        সতর্কতা: GPS-এর নির্ভুলতা কমলেই ভবনের ভেতরে প্রবেশ নিশ্চিত হয় না।
+        এই সংস্করণটি পরীক্ষামূলক। ভুল করে সাইলেন্ট হতে পারে।
+    </p>
+
+    <p class="note">Developer: Sabbir Ahmed</p>
 
 </div>
 
-<footer>
- Developer: Sabbir Ahmed<br>
- SABBIR SMART MODE © 2026
-</footer>
-
 <script>
-function requestDnd(){
- if(window.PhoneControl){
-  PhoneControl.requestDndAccess();
- }else{
-  alert("Android অ্যাপে চালু করুন");
- }
+
+function showStatus(message) {
+    document.getElementById("status").innerText = message;
 }
 
-function testSilent(){
- if(!window.PhoneControl){
-  alert("Android অ্যাপে চালু করুন");
-  return;
- }
-
- if(!PhoneControl.isDndAccessGranted()){
-  alert("আগে DND অনুমতি দিন");
-  requestDnd();
-  return;
- }
-
- const result=PhoneControl.setDnd(true);
-
- if(result){
-  document.getElementById("status").innerText="DND চালু হয়েছে";
- }else{
-  alert("DND চালু করা যায়নি");
- }
+function requestDnd() {
+    if (window.PhoneControl) {
+        PhoneControl.requestDndAccess();
+        showStatus("DND অনুমতি সেটিংস খুলুন");
+    } else {
+        showStatus("ফোনের সংযোগ পাওয়া যায়নি");
+    }
 }
 
-function restoreSound(){
- if(!window.PhoneControl){
-  alert("Android অ্যাপে চালু করুন");
-  return;
- }
-
- const result=PhoneControl.setDnd(false);
-
- if(result){
-  document.getElementById("status").innerText="DND বন্ধ হয়েছে";
- }
+function startMonitoring() {
+    if (window.PhoneControl) {
+        PhoneControl.startMonitoring();
+        showStatus("GPS পর্যবেক্ষণ চালুর অনুরোধ পাঠানো হয়েছে");
+        document.getElementById("gps").innerText =
+            "GPS পর্যবেক্ষণ চালুর চেষ্টা চলছে";
+    } else {
+        showStatus("ফোনের সংযোগ পাওয়া যায়নি");
+    }
 }
 
-function checkGPS(){
- if(!navigator.geolocation){
-  document.getElementById("gps").innerText="GPS সুবিধা পাওয়া যায়নি";
-  return;
- }
-
- document.getElementById("gps").innerText="অবস্থান খোঁজা হচ্ছে...";
-
- navigator.geolocation.getCurrentPosition(
-  function(position){
-   document.getElementById("gps").innerText=
-   "GPS পাওয়া গেছে ✓";
-  },
-  function(){
-   document.getElementById("gps").innerText=
-   "GPS অনুমতি বা Location পরীক্ষা করুন";
-  },
-  {enableHighAccuracy:true,timeout:15000}
- );
+function stopMonitoring() {
+    if (window.PhoneControl) {
+        PhoneControl.stopMonitoring();
+        showStatus("GPS পর্যবেক্ষণ বন্ধ করার অনুরোধ পাঠানো হয়েছে");
+        document.getElementById("gps").innerText =
+            "GPS পর্যবেক্ষণ বন্ধ";
+    }
 }
+
+function testSilent() {
+    if (!window.PhoneControl) return;
+
+    if (!PhoneControl.isDndAccessGranted()) {
+        showStatus("আগে DND অনুমতি দিন");
+        return;
+    }
+
+    let result = PhoneControl.setDnd(true);
+    showStatus(result ? "সাইলেন্ট পরীক্ষা সম্পন্ন" : "সাইলেন্ট করা যায়নি");
+}
+
+function restoreSound() {
+    if (!window.PhoneControl) return;
+
+    let result = PhoneControl.setDnd(false);
+    showStatus(result ? "আগের সাউন্ড ফিরিয়ে দেওয়ার চেষ্টা হয়েছে"
+                      : "সাউন্ড ফিরিয়ে দেওয়া যায়নি");
+}
+
 </script>
 
 </body>
