@@ -3,11 +3,16 @@ package com.sabbir.smartmode;
 import android.app.Activity;
 import android.os.Bundle;
 import android.Manifest;
+import android.content.Intent;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.app.NotificationManager;
+import android.provider.Settings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 
 public class MainActivity extends Activity {
 
@@ -23,6 +28,8 @@ public class MainActivity extends Activity {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setGeolocationEnabled(true);
+
+        webView.addJavascriptInterface(new PhoneControl(), "PhoneControl");
 
         webView.setWebViewClient(new WebViewClient());
 
@@ -60,6 +67,52 @@ public class MainActivity extends Activity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    public class PhoneControl {
+
+        @JavascriptInterface
+        public void requestDndAccess() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(
+                    Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS
+                );
+                startActivity(intent);
+            });
+        }
+
+        @JavascriptInterface
+        public boolean isDndAccessGranted() {
+            NotificationManager nm =
+                (NotificationManager) getSystemService(
+                    Context.NOTIFICATION_SERVICE
+                );
+
+            return nm.isNotificationPolicyAccessGranted();
+        }
+
+        @JavascriptInterface
+        public boolean setDnd(boolean enabled) {
+            NotificationManager nm =
+                (NotificationManager) getSystemService(
+                    Context.NOTIFICATION_SERVICE
+                );
+
+            if (!nm.isNotificationPolicyAccessGranted()) {
+                return false;
+            }
+
+            try {
+                nm.setInterruptionFilter(
+                    enabled
+                    ? NotificationManager.INTERRUPTION_FILTER_NONE
+                    : NotificationManager.INTERRUPTION_FILTER_ALL
+                );
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+    }
+
     @Override
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
@@ -68,4 +121,4 @@ public class MainActivity extends Activity {
             super.onBackPressed();
         }
     }
-}
+            }
