@@ -2,68 +2,44 @@ package com.sabbir.smartmode;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.Manifest;
 import android.content.Intent;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.app.NotificationManager;
+import android.content.SharedPreferences;
 import android.provider.Settings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
-import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 
 public class MainActivity extends Activity {
 
     private WebView webView;
-    private static final int LOCATION_REQUEST = 100;
+    private NotificationManager notificationManager;
+    private SharedPreferences preferences;
+
+    private static final String PREFS = "SmartModeSettings";
+    private static final String KEY_OLD_FILTER = "old_filter";
+    private static final String KEY_DND_ACTIVE = "dnd_active";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        webView = new WebView(this);
+        notificationManager = (NotificationManager)
+                getSystemService(Context.NOTIFICATION_SERVICE);
 
+        preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
+
+        webView = new WebView(this);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().setGeolocationEnabled(true);
 
         webView.addJavascriptInterface(new PhoneControl(), "PhoneControl");
-
         webView.setWebViewClient(new WebViewClient());
-
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onGeolocationPermissionsShowPrompt(
-                String origin,
-                GeolocationPermissions.Callback callback
-            ) {
-                boolean granted =
-                    checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED ||
-                    checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED;
-
-                callback.invoke(origin, granted, false);
-            }
-        });
+        webView.setWebChromeClient(new WebChromeClient());
 
         setContentView(webView);
-
-        if (checkSelfPermission(
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED) {
-
-            requestPermissions(
-                new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                },
-                LOCATION_REQUEST
-            );
-        }
-
         webView.loadUrl("file:///android_asset/index.html");
     }
 
@@ -81,35 +57,72 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public boolean isDndAccessGranted() {
-            NotificationManager nm =
-                (NotificationManager) getSystemService(
-                    Context.NOTIFICATION_SERVICE
-                );
-
-            return nm.isNotificationPolicyAccessGranted();
+            return notificationManager.isNotificationPolicyAccessGranted();
         }
 
         @JavascriptInterface
         public boolean setDnd(boolean enabled) {
-            NotificationManager nm =
-                (NotificationManager) getSystemService(
-                    Context.NOTIFICATION_SERVICE
-                );
 
-            if (!nm.isNotificationPolicyAccessGranted()) {
+            if (!notificationManager.isNotificationPolicyAccessGranted()) {
                 return false;
             }
 
             try {
-                nm.setInterruptionFilter(
-                    enabled
-                    ? NotificationManager.INTERRUPTION_FILTER_NONE
-                    : NotificationManager.INTERRUPTION_FILTER_ALL
-                );
+                if (enabled) {
+
+                    boolean alreadyActive =
+                        preferences.getBoolean(KEY_DND_ACTIVE, false);
+
+                    if (!alreadyActive) {
+                        int oldFilter =
+                            notificationManager.getCurrentInterruptionFilter();
+
+                        preferences.edit()
+                            .putInt(KEY_OLD_FILTER, oldFilter)
+                            .putBoolean(KEY_DND_ACTIVE, true)
+                            .apply();
+                    }
+
+                    notificationManager.setInterruptionFilter(
+                        NotificationManager.INTERRUPTION_FILTER_NONE
+                    );
+
+                } else {
+
+                    boolean wasActive =
+                        preferences.getBoolean(KEY_DND_ACTIVE, false);
+
+                    if (wasActive) {
+                        int oldFilter = preferences.getInt(
+                            KEY_OLD_FILTER,
+                            NotificationManager.INTERRUPTION_FILTER_ALL
+                        );
+
+                        notificationManager.setInterruptionFilter(oldFilter);
+
+                        preferences.edit()
+                            .putBoolean(KEY_DND_ACTIVE, false)
+                            .apply();
+                    }
+                }
+
                 return true;
+
             } catch (Exception e) {
                 return false;
             }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "if(typeof updateDndStatus === 'function'){updateDndStatus();}",
+                null
+            );
         }
     }
 
@@ -121,4 +134,4 @@ public class MainActivity extends Activity {
             super.onBackPressed();
         }
     }
-            }
+}
