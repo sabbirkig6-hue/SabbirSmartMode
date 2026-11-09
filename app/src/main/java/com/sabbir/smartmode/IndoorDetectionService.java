@@ -1,4 +1,3 @@
-
 package com.sabbir.smartmode;
 
 import android.app.Service;
@@ -7,40 +6,35 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.content.pm.PackageManager;
 import android.Manifest;
+import android.content.pm.PackageManager;
+import android.widget.Toast;
 
 public class IndoorDetectionService extends Service {
 
     private static final String CHANNEL_ID = "smart_mode_channel";
+
     private LocationManager locationManager;
-
-    private int weakCount = 0;
-    private int strongCount = 0;
-
-    private SharedPreferences preferences;
     private NotificationManager notificationManager;
+
+    private int updateCount = 0;
+    private Location lastLocation;
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        preferences = getSharedPreferences(
-            "SmartModeSettings", MODE_PRIVATE
-        );
+        locationManager = (LocationManager)
+            getSystemService(Context.LOCATION_SERVICE);
 
         notificationManager = (NotificationManager)
             getSystemService(Context.NOTIFICATION_SERVICE);
-
-        locationManager = (LocationManager)
-            getSystemService(Context.LOCATION_SERVICE);
 
         createNotificationChannel();
     }
@@ -49,7 +43,7 @@ public class IndoorDetectionService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "SABBIR SMART MODE",
+                "SABBIR SMART MODE GPS",
                 NotificationManager.IMPORTANCE_LOW
             );
 
@@ -57,19 +51,19 @@ public class IndoorDetectionService extends Service {
         }
     }
 
-    private Notification createNotification() {
+    private Notification createNotification(String message) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             return new Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("SABBIR SMART MODE চালু")
-                .setContentText("GPS সংকেত পর্যবেক্ষণ চলছে")
+                .setContentTitle("SABBIR SMART MODE")
+                .setContentText(message)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setOngoing(true)
                 .build();
         }
 
         return new Notification.Builder(this)
-            .setContentTitle("SABBIR SMART MODE চালু")
-            .setContentText("GPS সংকেত পর্যবেক্ষণ চলছে")
+            .setContentTitle("SABBIR SMART MODE")
+            .setContentText(message)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build();
@@ -78,10 +72,13 @@ public class IndoorDetectionService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        startForeground(101, createNotification());
+        startForeground(
+            101,
+            createNotification("GPS তথ্যের অপেক্ষায়...")
+        );
 
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+            != PackageManager.PERMISSION_GRANTED) {
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -93,8 +90,17 @@ public class IndoorDetectionService extends Service {
                 0,
                 locationListener
             );
-        } catch (Exception e) {
-            stopSelf();
+
+            Location previous = locationManager.getLastKnownLocation(
+                LocationManager.GPS_PROVIDER
+            );
+
+            if (previous != null) {
+                showGpsInfo(previous);
+            }
+
+        } catch (SecurityException | IllegalArgumentException e) {
+            updateNotification("GPS চালু করা যায়নি");
         }
 
         return START_STICKY;
@@ -105,33 +111,17 @@ public class IndoorDetectionService extends Service {
 
         @Override
         public void onLocationChanged(Location location) {
-
-            float accuracy = location.getAccuracy();
-
-            if (accuracy >= 50) {
-                weakCount++;
-                strongCount = 0;
-
-                if (weakCount >= 3) {
-                    setSilent(true);
-                }
-
-            } else if (accuracy <= 25) {
-                strongCount++;
-                weakCount = 0;
-
-                if (strongCount >= 3) {
-                    setSilent(false);
-                }
-            }
+            showGpsInfo(location);
         }
 
         @Override
         public void onProviderDisabled(String provider) {
+            updateNotification("ফোনের GPS বন্ধ আছে");
         }
 
         @Override
         public void onProviderEnabled(String provider) {
+            updateNotification("GPS চালু হয়েছে");
         }
 
         @Override
@@ -141,47 +131,29 @@ public class IndoorDetectionService extends Service {
         }
     };
 
-    private void setSilent(boolean enabled) {
+    private void showGpsInfo(Location location) {
 
-        if (!notificationManager.isNotificationPolicyAccessGranted()) {
-            return;
-        }
+        updateCount++;
+        lastLocation = location;
 
-        try {
-            boolean active = preferences.getBoolean(
-                "dnd_active", false
-            );
+        float accuracy = location.getAccuracy();
 
-            if (enabled && !active) {
+        String message =
+            "GPS পাওয়া গেছে | Accuracy: "
+            + accuracy + " মিটার | আপডেট: "
+            + updateCount;
 
-                int oldFilter =
-                    notificationManager.getCurrentInterruptionFilter();
+        updateNotification(message);
 
-                preferences.edit()
-                    .putInt("old_filter", oldFilter)
-                    .putBoolean("dnd_active", true)
-                    .apply();
+        // এই সংস্করণে GPS তথ্য পরীক্ষা করা হচ্ছে।
+        // এখনো স্বয়ংক্রিয় সাইলেন্ট চালু করা হচ্ছে না।
+    }
 
-                notificationManager.setInterruptionFilter(
-                    NotificationManager.INTERRUPTION_FILTER_NONE
-                );
-
-            } else if (!enabled && active) {
-
-                int oldFilter = preferences.getInt(
-                    "old_filter",
-                    NotificationManager.INTERRUPTION_FILTER_ALL
-                );
-
-                notificationManager.setInterruptionFilter(oldFilter);
-
-                preferences.edit()
-                    .putBoolean("dnd_active", false)
-                    .apply();
-            }
-
-        } catch (Exception e) {
-        }
+    private void updateNotification(String message) {
+        notificationManager.notify(
+            101,
+            createNotification(message)
+        );
     }
 
     @Override
@@ -189,6 +161,7 @@ public class IndoorDetectionService extends Service {
         if (locationManager != null) {
             locationManager.removeUpdates(locationListener);
         }
+
         super.onDestroy();
     }
 
@@ -196,4 +169,4 @@ public class IndoorDetectionService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-        }
+    }
