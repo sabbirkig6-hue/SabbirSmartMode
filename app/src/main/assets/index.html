@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#075c42">
+<title>SABBIR SMART MODE</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f1f7f3;
+  color: #173c2c;
+}
+
+header {
+  background: #075c42;
+  color: white;
+  padding: 25px 18px;
+  text-align: center;
+  border-radius: 0 0 25px 25px;
+}
+
+.logo {
+  font-size: 43px;
+  margin-bottom: 8px;
+}
+
+header h2 {
+  font-size: 21px;
+}
+
+header p {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #d8f5e6;
+}
+
+.container {
+  padding: 18px;
+  max-width: 500px;
+  margin: auto;
+}
+
+.status {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 3px 12px #0000000c;
+  margin-bottom: 18px;
+}
+
+.status h3 {
+  margin-bottom: 10px;
+}
+
+#mainStatus {
+  color: #d17b00;
+  font-weight: bold;
+}
+
+.mode {
+  background: white;
+  padding: 18px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  box-shadow: 0 3px 12px #0000000c;
+}
+
+.mode-icon {
+  font-size: 34px;
+}
+
+.mode-info {
+  flex: 1;
+}
+
+.mode-info h3 {
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.mode-info p {
+  font-size: 12px;
+  color: #75877c;
+}
+
+.switch {
+  width: 48px;
+  height: 27px;
+  appearance: none;
+  background: #cbd5ce;
+  border-radius: 30px;
+  position: relative;
+  cursor: pointer;
+}
+
+.switch:checked {
+  background: #078653;
+}
+
+.switch::before {
+  content: "";
+  position: absolute;
+  height: 21px;
+  width: 21px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: .2s;
+}
+
+.switch:checked::before {
+  left: 24px;
+}
+
+.button {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 12px;
+  background: #08734e;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: #e1eee7;
+  color: #075c42;
+}
+
+.note {
+  margin-top: 18px;
+  background: #e3f2e9;
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+footer {
+  text-align: center;
+  padding: 25px 10px;
+  font-size: 12px;
+  color: #78877e;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">🕌</div>
+  <h2>SABBIR SMART MODE</h2>
+  <p>আপনার ফোন চলবে আপনার নিয়মে</p>
+</header>
+
+<div class="container">
+
+  <div class="status">
+    <h3>বর্তমান অবস্থা</h3>
+    <p id="mainStatus">অ্যাপ প্রস্তুত</p>
+    <p id="locationStatus" style="font-size:12px;margin-top:8px;">
+      GPS এখনো পরীক্ষা করা হয়নি
+    </p>
+  </div>
+
+  <div class="mode">
+    <div class="mode-icon">🏠</div>
+    <div class="mode-info">
+      <h3>Home Mode</h3>
+      <p>বাসায় প্রবেশ করলে সাইলেন্ট</p>
+    </div>
+    <input class="switch" type="checkbox" id="homeMode">
+  </div>
+
+  <div class="mode">
+    <div class="mode-icon">🕌</div>
+    <div class="mode-info">
+      <h3>Mosque Mode</h3>
+      <p>মসজিদে প্রবেশ করলে সাইলেন্ট</p>
+    </div>
+    <input class="switch" type="checkbox" id="mosqueMode">
+  </div>
+
+  <button class="button" onclick="checkGPS()">
+    📍 GPS পরীক্ষা করুন
+  </button>
+
+  <button class="button secondary" onclick="showInfo()">
+    অ্যাপ সম্পর্কে
+  </button>
+
+  <div class="note">
+    <b>গুরুত্বপূর্ণ:</b><br>
+    এটি অ্যাপের প্রথম ডিজাইন সংস্করণ।
+    GPS দিয়ে অবস্থান শনাক্ত করে Android-এর
+    সাইলেন্ট মোড চালু করার সুবিধা এখনো
+    যুক্ত করা হয়নি।
+  </div>
+
+</div>
+
+<footer>
+  Developer: Sabbir Ahmed<br>
+  SABBIR SMART MODE © 2026
+</footer>
+
+<script>
+function checkGPS() {
+  const status = document.getElementById("locationStatus");
+  const main = document.getElementById("mainStatus");
+
+  if (!navigator.geolocation) {
+    status.innerText = "এই ব্রাউজারে GPS সুবিধা নেই";
+    return;
+  }
+
+  status.innerText = "অবস্থান খোঁজা হচ্ছে...";
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      status.innerText =
+        "অবস্থান পাওয়া গেছে ✓";
+
+      main.innerText = "GPS সংযুক্ত";
+
+    },
+    function(error) {
+      status.innerText =
+        "GPS অনুমতি দিন অথবা Location চালু করুন";
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000
+    }
+  );
+}
+
+function showInfo() {
+  alert(
+    "SABBIR SMART MODE\n\n" +
+    "Developer: Sabbir Ahmed\n\n" +
+    "লক্ষ্য: GPS দিয়ে স্বয়ংক্রিয় সাইলেন্ট মোড।"
+  );
+}
+</script>
+
+</body>
+  </html>
+  
